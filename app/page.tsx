@@ -1,19 +1,32 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dashboard } from "@/components/dashboard"
 import { DiceGame } from "@/components/dice-game"
 import { HistoryPage } from "@/components/history-page"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 
+
+interface Particle {
+  id: number;
+  left: string;
+  top: string;
+  delay: string;
+}
+
 function FloatingParticles() {
-  const particles = Array.from({ length: 20 }, (_, i) => ({
-    id: i,
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    delay: `${Math.random() * 8}s`,
-  }))
+  const [particles, setParticles] = useState<Particle[]>([]); // <- tipado correcto
+
+  useEffect(() => {
+    const p: Particle[] = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 8}s`,
+    }));
+    setParticles(p);
+  }, []);
 
   return (
     <div className="particles">
