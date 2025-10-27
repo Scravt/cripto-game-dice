@@ -3,15 +3,23 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Wallet } from "lucide-react"
-import { useWallet } from "@/hooks/useWallet"
+import { WalletState } from "@/types/walletTypes"
+import { useWalletContext } from "@/context/WalletContext"
 
 export function WalletButton() {
-  const [isConnected, setIsConnected] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const { connectWallet, disconnectWallet, error } = useWallet()
+  const { connectWallet, disconnectWallet, account, error } = useWalletContext()
 
-  const handleConnect = () => {
-    connectWallet()
+  const isConnected = Boolean(account)
+
+
+
+  const handleConnect = async () => {
+    try {
+      await connectWallet()
+    } catch (err) {
+      console.error("Error connecting wallet:", err)
+    }
   }
 
   return (
@@ -30,7 +38,7 @@ export function WalletButton() {
     >
       <div className="flex items-center gap-2">
         <Wallet className={`w-5 h-5 ${isHovered ? "animate-float" : ""}`} />
-        <span>{isConnected ? "0x1234...5678" : "Connect Wallet"}</span>
+        <span>{isConnected ? `${account}` : "Connect Wallet"}</span>
       </div>
       {isHovered && (
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse" />

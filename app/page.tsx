@@ -6,7 +6,7 @@ import { DiceGame } from "@/components/dice-game"
 import { HistoryPage } from "@/components/history-page"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
-
+import { WalletProvider } from "@/context/WalletContext"
 
 interface Particle {
   id: number;
@@ -49,7 +49,7 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState<"dashboard" | "game" | "history">("dashboard")
 
   return (
-    <>
+    <WalletProvider>
       <FloatingParticles />
       <main className="min-h-screen relative z-10">
         {currentPage === "dashboard" && <Dashboard onNavigate={setCurrentPage} />}
@@ -74,6 +74,6 @@ export default function Home() {
 
         {currentPage === "history" && <HistoryPage onNavigate={setCurrentPage} />}
       </main>
-    </>
+    </WalletProvider>
   )
 }

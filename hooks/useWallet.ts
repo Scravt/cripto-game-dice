@@ -1,107 +1,118 @@
-import { de } from "date-fns/locale";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { WalletState } from "../types/walletTypes";
 
-interface WalletState {
-    account: string | null;
-    chainId: string | null;
-    ethBalance: string | null;
-    tokenBalance: number; // token de prueba
-}
 declare global {
-    interface Window {
-        ethereum?: any;
-    }
+  interface Window {
+    ethereum?: any;
+  }
 }
 
-export function useWallet() {
-    const [error, setError] = useState<string | null>(null);
+export interface WalletContextProps extends WalletState {
+  connectWallet: () => Promise<void>;
+  disconnectWallet: () => void;
+  signMessage: (message: string) => Promise<string | null>;
+  transferToken: (amount: number) => void;
+  setBalances: React.Dispatch<
+    React.SetStateAction<{ eth: string | null; token: number }>
+  >;
+}
 
-    const [wallet, setWallet] = useState<WalletState>({
-        account: null,
-        chainId: null,
-        ethBalance: null,
-        tokenBalance: 100, // inicial para token de prueba
-    });
+export function useWallet(): WalletContextProps {
+  const [account, setAccount] = useState<string | null>(null);
+  const [chainId, setChainId] = useState<string | null>(null);
+  const [eth, setEth] = useState<string | null>(null);
+  const [token, setToken] = useState<number>(100);
+  const [error, setError] = useState<string | null>(null);
 
-    // Conectar wallet
-    const connectWallet = useCallback(async () => {
-        if (!window.ethereum) {
-            alert("MetaMask no detectado");
-            return;
-        }
+  // ✅ Versión correcta de setBalances
+  const setBalances: React.Dispatch<
+    React.SetStateAction<{ eth: string | null; token: number }>
+  > = useCallback(
+    (value) => {
+      if (typeof value === "function") {
+        const newState = value({ eth, token });
+        setEth(newState.eth);
+        setToken(newState.token);
+      } else {
+        setEth(value.eth);
+        setToken(value.token);
+      }
+    },
+    [eth, token]
+  );
 
-        try {
-            const accounts: string[] = await window.ethereum.request({
-                method: "eth_requestAccounts",
-            });
-            const chainId: string = await window.ethereum.request({
-                method: "eth_chainId",
-            });
+  // 🔹 Conectar wallet
+  const connectWallet = useCallback(async () => {
+    if (!window.ethereum) {
+      setError("MetaMask no detectado");
+      return;
+    }
 
-            setWallet((prev) => ({
-                ...prev,
-                account: accounts[0],
-                chainId,
-            }));
+    try {
+      const accounts: string[] = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      const chain: string = await window.ethereum.request({
+        method: "eth_chainId",
+      });
 
-            // Obtener balance ETH
-            const balanceHex: string = await window.ethereum.request({
-                method: "eth_getBalance",
-                params: [accounts[0], "latest"],
-            });
-            const balance = parseInt(balanceHex, 16) / 1e18;
-            setWallet((prev) => ({ ...prev, ethBalance: balance.toFixed(4) }));
-        } catch (err: unknown) {
-            console.error(error);
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError(String(err));
-            }
-        }
-    }, []);
+      setAccount(accounts[0]);
+      setChainId(chain);
 
-    // Desconectar wallet (solo limpia estado)
-    const disconnectWallet = useCallback(() => {
-        setWallet({
-            account: null,
-            chainId: null,
-            ethBalance: null,
-            tokenBalance: 100,
+      // Obtener balance ETH
+      const balanceHex: string = await window.ethereum.request({
+        method: "eth_getBalance",
+        params: [accounts[0], "latest"],
+      });
+      const balance = parseInt(balanceHex, 16) / 1e18;
+      setEth(balance.toFixed(4));
+    } catch (err: unknown) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
+  // 🔹 Desconectar wallet
+  const disconnectWallet = useCallback(() => {
+    setAccount(null);
+    setChainId(null);
+    setEth(null);
+    setToken(100);
+    setError(null);
+  }, []);
+
+  // 🔹 Firmar mensaje
+  const signMessage = useCallback(
+    async (message: string) => {
+      if (!account) return null;
+      try {
+        const signature = await window.ethereum.request({
+          method: "personal_sign",
+          params: [message, account],
         });
-    }, []);
+        return signature;
+      } catch (err) {
+        console.error(err);
+        return null;
+      }
+    },
+    [account]
+  );
 
-    // Firmar mensaje para demostración
-    const signMessage = useCallback(async (message: string) => {
-        if (!wallet.account) return null;
-        try {
-            const signature = await window.ethereum.request({
-                method: "personal_sign",
-                params: [message, wallet.account],
-            });
-            return signature;
-        } catch (err) {
-            console.error(err);
-            return null;
-        }
-    }, [wallet.account]);
+  // 🔹 Transferir token de prueba
+  const transferToken = useCallback((amount: number) => {
+    setToken((prev) => Math.max(prev - amount, 0));
+  }, []);
 
-    // Simular transferencia de token de prueba
-    const transferToken = useCallback((amount: number) => {
-        setWallet((prev) => ({
-            ...prev,
-            tokenBalance: prev.tokenBalance - amount,
-        }));
-    }, []);
-
-    // Puedes agregar más funciones: apuestas, recibir tokens, etc.
-
-    return {
-        wallet,
-        connectWallet,
-        disconnectWallet,
-        signMessage,
-        transferToken,
-        error,
-    };
+  return {
+    account,
+    chainId,
+    balances: { eth, token },
+    connectWallet,
+    disconnectWallet,
+    signMessage,
+    transferToken,
+    setBalances,
+    error,
+  };
 }
