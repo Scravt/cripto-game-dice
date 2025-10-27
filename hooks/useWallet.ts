@@ -102,5 +102,6 @@ export function useWallet() {
         disconnectWallet,
         signMessage,
         transferToken,
+        error,
     };
 }

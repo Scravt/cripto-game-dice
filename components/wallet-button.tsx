@@ -3,14 +3,15 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Wallet } from "lucide-react"
+import { useWallet } from "@/hooks/useWallet"
 
 export function WalletButton() {
   const [isConnected, setIsConnected] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const { connectWallet, disconnectWallet, error } = useWallet()
 
   const handleConnect = () => {
-    // Mock connection - real Web3 logic would go here
-    setIsConnected(!isConnected)
+    connectWallet()
   }
 
   return (
